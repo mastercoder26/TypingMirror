@@ -17,10 +17,22 @@ final class EventTapRunner: @unchecked Sendable {
     private var classTable = KeyClassTable.forCurrentInputSource()
     private let lock = NSLock()
     private var _resetCount = 0
+    private var _lastInstallSucceeded = false
 
     var resetCount: Int {
         lock.lock(); defer { lock.unlock() }
         return _resetCount
+    }
+
+    private var lastInstallSucceeded: Bool {
+        get {
+            lock.lock(); defer { lock.unlock() }
+            return _lastInstallSucceeded
+        }
+        set {
+            lock.lock(); defer { lock.unlock() }
+            _lastInstallSucceeded = newValue
+        }
     }
 
     init(ring: KeyEventRingBuffer = KeyEventRingBuffer()) {
@@ -33,12 +45,13 @@ final class EventTapRunner: @unchecked Sendable {
         guard thread == nil else { return true }
 
         let ready = DispatchSemaphore(value: 0)
-        var didInstall = false
+        lastInstallSucceeded = false
 
         let thread = Thread { [weak self] in
             guard let self else { ready.signal(); return }
             self.runLoop = CFRunLoopGetCurrent()
-            didInstall = self.install()
+            let didInstall = self.install()
+            self.lastInstallSucceeded = didInstall
             ready.signal()
             guard didInstall else { return }
             while !Thread.current.isCancelled {
@@ -51,6 +64,7 @@ final class EventTapRunner: @unchecked Sendable {
         thread.start()
         ready.wait()
 
+        let didInstall = lastInstallSucceeded
         if !didInstall { self.thread = nil }
         return didInstall
     }

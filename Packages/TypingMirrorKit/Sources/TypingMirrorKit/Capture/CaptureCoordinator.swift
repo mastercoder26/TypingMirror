@@ -143,15 +143,20 @@ public final class CaptureCoordinator {
         let secure = IsSecureEventInputEnabled()
         if secure != isSecureInputActive {
             isSecureInputActive = secure
-            markGap()
+            await markGap()
         }
+
+        // Never attach events drained during secure input to the segment that
+        // follows it. The tap normally receives none, but discarding defensively
+        // keeps the privacy boundary correct if delivery timing changes.
+        guard !secure else { return }
 
         guard !raw.isEmpty else { return }
 
         let frontmost = NSWorkspace.shared.frontmostApplication
         let bundleID = frontmost?.bundleIdentifier
         guard settings.allows(bundleID: bundleID) else {
-            markGap()
+            await markGap()
             return
         }
 
@@ -192,18 +197,19 @@ public final class CaptureCoordinator {
         switch keyClass {
         case .space, .returnEnter, .tab: wordPosition = 0
         case .backspace: wordPosition = wordPosition > 0 ? wordPosition - 1 : 0
-        default: wordPosition = min(wordPosition &+ 1, 255)
+        case .letter, .digit, .punctuation, .imeOrNonLatin:
+            if wordPosition < .max { wordPosition += 1 }
+        default: break
         }
     }
 
-    private func markGap() {
-        _ = segmenter.accept(
-            event: TypingEvent(intervalMs: 0, keyClass: .gapSentinel),
-            at: Date(),
-            appName: nil,
-            category: .mixed
-        )
-        lastTimestampMs = nil
+    private func markGap() async {
+        // A period in which capture is forbidden has unknown duration and unknown
+        // contents. Close the current segment instead of joining both sides with
+        // a zero-length marker, which would overstate speed and blur app privacy
+        // boundaries.
+        wordPosition = 0
+        await flushOpenSegment()
     }
 
     private func flushOpenSegment() async {
