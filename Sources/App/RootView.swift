@@ -6,6 +6,7 @@ struct RootView: View {
 
     @State private var selection: SidebarItem = .today
     @State private var selectedSession: SessionRecord.ID?
+    @State private var replaySession: SessionRecord?
     @AppStorage("onboarding.completed.v1") private var hasOnboarded = false
     @State private var showingOnboarding = false
 
@@ -22,6 +23,11 @@ struct RootView: View {
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView(isPresented: $showingOnboarding)
                 .onDisappear { hasOnboarded = true }
+        }
+        .sheet(item: $replaySession) { session in
+            ReplayView(session: session)
+                .frame(minWidth: 860, minHeight: 520)
+                .background(Tk.C.bgBase)
         }
         .task {
             await model.start()
@@ -74,9 +80,15 @@ struct RootView: View {
             SessionListView(
                 sessions: model.sessions,
                 selection: $selectedSession,
-                onReplay: { _ in },
+                onReplay: { replaySession = $0 },
                 onDelete: { id in Task { await model.delete(sessionID: id) } }
             )
+        case .compare:
+            SessionCompareView(sessions: model.sessions)
+        case .corrections:
+            CorrectionHeatmapView(sessions: model.sessions)
+        case .fingerprint:
+            FingerprintGalleryView(days: model.days)
         case .speedTest:
             SpeedTestView()
         case .practice:
