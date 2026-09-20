@@ -4,6 +4,7 @@ import TypingMirrorKit
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var selection: SidebarItem = .today
+    @State private var selectedSession: SessionRecord.ID?
     @AppStorage("onboarding.completed.v1") private var hasOnboarded = false
     @State private var showingOnboarding = false
 
@@ -41,22 +42,36 @@ struct RootView: View {
             }
         }
         .navigationSplitViewColumnWidth(Theme.Layout.sidebarWidth)
+        .safeAreaInset(edge: .bottom) { sidebarFooter }
+    }
+
+    private var sidebarFooter: some View {
+        HStack(spacing: Theme.Spacing.small) {
+            if let coordinator = model.coordinator, coordinator.state == .running {
+                Circle().fill(Theme.Colors.primaryText).frame(width: 5, height: 5)
+                Text("Watching").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.secondaryText)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Theme.Spacing.medium)
+        .padding(.vertical, Theme.Spacing.regular)
     }
 
     @ViewBuilder
     private var detail: some View {
         switch selection {
         case .today:
-            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                Text("Today")
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Colors.primaryText)
-                Text("Sessions will land here once capture is wired up.")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Colors.secondaryText)
+            DashboardView(sessions: model.sessions, days: model.days) { id in
+                selectedSession = id
+                selection = .sessions
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(Theme.Spacing.extraLarge)
+        case .sessions:
+            SessionListView(
+                sessions: model.sessions,
+                selection: $selectedSession,
+                onReplay: { _ in },
+                onDelete: { id in Task { await model.delete(sessionID: id) } }
+            )
         case .settings:
             SettingsView()
         }
