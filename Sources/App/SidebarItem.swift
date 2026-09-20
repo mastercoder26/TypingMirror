@@ -3,6 +3,8 @@ import Foundation
 enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case today
     case sessions
+    case compare
+    case corrections
     case speedTest
     case practice
     case settings
@@ -13,6 +15,8 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: "Today"
         case .sessions: "Sessions"
+        case .compare: "Compare"
+        case .corrections: "Corrections"
         case .speedTest: "Speed test"
         case .practice: "Practice pad"
         case .settings: "Settings"
@@ -23,6 +27,8 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: "square.grid.2x2"
         case .sessions: "list.bullet"
+        case .compare: "chart.bar.xaxis"
+        case .corrections: "delete.left"
         case .speedTest: "timer"
         case .practice: "keyboard"
         case .settings: "gearshape"
@@ -32,7 +38,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     var section: String {
         switch self {
         case .today: "Today"
-        case .sessions: "Analyse"
+        case .sessions, .compare, .corrections: "Analyse"
         case .speedTest, .practice: "Practice"
         case .settings: "App"
         }
