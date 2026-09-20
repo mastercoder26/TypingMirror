@@ -59,14 +59,15 @@ final class AppModel {
         }
     }
 
+    @discardableResult
     func saveSession(
         events: [TypingEvent],
         startedAt: Date,
         category: SessionCategory,
         source: CaptureSource
-    ) async {
+    ) async -> Bool {
         do {
-            _ = try await store.save(
+            let saved = try await store.save(
                 events: events,
                 startedAt: startedAt,
                 category: category,
@@ -74,8 +75,10 @@ final class AppModel {
                 source: source
             )
             await reload()
+            return saved != nil
         } catch {
             loadError = error.localizedDescription
+            return false
         }
     }
 
