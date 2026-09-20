@@ -72,6 +72,8 @@ struct RootView: View {
                 onReplay: { _ in },
                 onDelete: { id in Task { await model.delete(sessionID: id) } }
             )
+        case .practice:
+            PracticePadView()
         case .settings:
             SettingsView()
         }

@@ -3,6 +3,7 @@ import Foundation
 enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case today
     case sessions
+    case practice
     case settings
 
     var id: String { rawValue }
@@ -11,6 +12,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: "Today"
         case .sessions: "Sessions"
+        case .practice: "Practice pad"
         case .settings: "Settings"
         }
     }
@@ -19,6 +21,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: "square.grid.2x2"
         case .sessions: "list.bullet"
+        case .practice: "keyboard"
         case .settings: "gearshape"
         }
     }
@@ -27,9 +30,10 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .today: "Today"
         case .sessions: "Analyse"
+        case .practice: "Practice"
         case .settings: "App"
         }
     }
 
-    static let sections = ["Today", "Analyse", "App"]
+    static let sections = ["Today", "Analyse", "Practice", "App"]
 }
