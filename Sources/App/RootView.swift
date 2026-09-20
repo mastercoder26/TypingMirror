@@ -13,10 +13,7 @@ struct RootView: View {
         } detail: {
             ZStack {
                 AppBackdrop()
-                Text("Today")
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Colors.primaryText)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                detail
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -44,5 +41,24 @@ struct RootView: View {
             }
         }
         .navigationSplitViewColumnWidth(Theme.Layout.sidebarWidth)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selection {
+        case .today:
+            VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                Text("Today")
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Colors.primaryText)
+                Text("Sessions will land here once capture is wired up.")
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Colors.secondaryText)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(Theme.Spacing.extraLarge)
+        case .settings:
+            SettingsView()
+        }
     }
 }

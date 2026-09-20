@@ -2,10 +2,30 @@ import Foundation
 
 enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case today
+    case settings
 
     var id: String { rawValue }
-    var title: String { "Today" }
-    var symbol: String { "square.grid.2x2" }
-    var section: String { "Today" }
-    static let sections = ["Today"]
+
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .settings: "Settings"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .today: "square.grid.2x2"
+        case .settings: "gearshape"
+        }
+    }
+
+    var section: String {
+        switch self {
+        case .today: "Today"
+        case .settings: "App"
+        }
+    }
+
+    static let sections = ["Today", "App"]
 }
