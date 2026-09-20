@@ -5,6 +5,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case sessions
     case compare
     case corrections
+    case fingerprint
     case speedTest
     case practice
     case settings
@@ -17,6 +18,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         case .sessions: "Sessions"
         case .compare: "Compare"
         case .corrections: "Corrections"
+        case .fingerprint: "Fingerprints"
         case .speedTest: "Speed test"
         case .practice: "Practice pad"
         case .settings: "Settings"
@@ -29,6 +31,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         case .sessions: "list.bullet"
         case .compare: "chart.bar.xaxis"
         case .corrections: "delete.left"
+        case .fingerprint: "circle.hexagongrid"
         case .speedTest: "timer"
         case .practice: "keyboard"
         case .settings: "gearshape"
@@ -37,7 +40,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
 
     var section: String {
         switch self {
-        case .today: "Today"
+        case .today, .fingerprint: "Today"
         case .sessions, .compare, .corrections: "Analyse"
         case .speedTest, .practice: "Practice"
         case .settings: "App"
