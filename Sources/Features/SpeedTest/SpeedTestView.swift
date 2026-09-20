@@ -114,7 +114,9 @@ struct SpeedTestView: View {
 
             Spacer()
 
-            Text("Nothing you type here is stored — only the timing between keys.")
+            Text(model.settings.tier.storesText
+                ? "Timing is stored. Long hesitations on safe words may also be kept."
+                : "Nothing you type here is stored — only the timing between keys.")
                 .font(Tk.F.caption)
                 .foregroundStyle(Tk.C.textTertiary)
         }

@@ -98,7 +98,13 @@ final class SpeedTestEngine {
             append(character, interval: interval)
         case .backspace:
             if !currentWord.isEmpty { currentWord.removeLast() }
-            events.append(TypingEvent(intervalMs: interval, keyClass: .backspace))
+            events.append(
+                TypingEvent(
+                    intervalMs: interval,
+                    keyClass: .backspace,
+                    wordPosition: UInt8(min(currentWord.count, Int(UInt8.max)))
+                )
+            )
         case .wordDelete:
             currentWord = ""
             events.append(TypingEvent(intervalMs: interval, keyClass: .backspace))
@@ -121,26 +127,29 @@ final class SpeedTestEngine {
         events.append(
             TypingEvent(
                 intervalMs: interval,
-                keyClass: character.isLetter ? .letter : .punctuation,
-                wordPosition: UInt8(min(position, 255))
+                keyClass: character.isLetter ? .letter
+                    : (character.isNumber ? .digit : .punctuation),
+                wordPosition: UInt8(min(position + 1, Int(UInt8.max)))
             )
         )
     }
 
     private func commitWord(leadInMs: Double = 0) {
         guard !currentWord.isEmpty else { return }
+        let wordWasCorrect = wordIndex < prompt.count && prompt[wordIndex] == currentWord
         // Only genuinely long lead-ins are worth reporting, and only when the word
         // was typed correctly — otherwise the delay is confusion, not hesitation.
         if leadInMs > MetricConstants.pauseMs,
-           wordIndex < prompt.count,
-           prompt[wordIndex] == currentWord {
+           wordWasCorrect {
             pendingHesitations.append((word: currentWord, hesitationMs: leadInMs))
         }
         typedWords.append(currentWord)
         currentWord = ""
         wordIndex += 1
         totalKeystrokes += 1
-        correctKeystrokes += 1
+        // A separating space is correct only when it follows the expected word.
+        // Counting every space as correct inflated raw accuracy after mistakes.
+        if wordWasCorrect { correctKeystrokes += 1 }
     }
 
     /// The recorded stream, for persistence once the test ends.
