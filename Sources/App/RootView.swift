@@ -3,9 +3,11 @@ import TypingMirrorKit
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+
     @State private var selection: SidebarItem = .today
     @State private var selectedSession: SessionRecord.ID?
     @State private var replaySession: SessionRecord?
+    @State private var palette = PaletteModel()
     @AppStorage("onboarding.completed.v1") private var hasOnboarded = false
     @State private var showingOnboarding = false
 
@@ -19,6 +21,7 @@ struct RootView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .overlay { if palette.isPresented { paletteOverlay } }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView(isPresented: $showingOnboarding)
                 .onDisappear { hasOnboarded = true }
@@ -30,9 +33,18 @@ struct RootView: View {
         }
         .task {
             await model.start()
+            rebuildCommands()
             if !hasOnboarded { showingOnboarding = true }
         }
+        .onChange(of: model.sessions.map(\.id)) { _, _ in rebuildCommands() }
+        .background {
+            Button("") { palette.present() }
+                .keyboardShortcut("k", modifiers: .command)
+                .hidden()
+        }
     }
+
+    // MARK: Sidebar
 
     private var sidebar: some View {
         List(selection: $selection) {
@@ -52,16 +64,28 @@ struct RootView: View {
     }
 
     private var sidebarFooter: some View {
-        HStack(spacing: Theme.Spacing.small) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
             if let coordinator = model.coordinator, coordinator.state == .running {
-                Circle().fill(Theme.Colors.primaryText).frame(width: 5, height: 5)
-                Text("Watching").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.secondaryText)
+                HStack(spacing: Theme.Spacing.small) {
+                    Circle()
+                        .fill(Theme.Colors.primaryText)
+                        .frame(width: 5, height: 5)
+                    Text("Watching")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Colors.secondaryText)
+                }
             }
-            Spacer()
+            HStack {
+                Text("Search").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.mutedText)
+                Spacer()
+                Text("⌘K").font(Theme.Typography.smallMonospaced).foregroundStyle(Theme.Colors.mutedText)
+            }
         }
         .padding(.horizontal, Theme.Spacing.medium)
         .padding(.vertical, Theme.Spacing.regular)
     }
+
+    // MARK: Detail
 
     @ViewBuilder
     private var detail: some View {
@@ -82,6 +106,8 @@ struct RootView: View {
             SessionCompareView(sessions: model.sessions)
         case .corrections:
             CorrectionHeatmapView(sessions: model.sessions)
+        case .hesitations:
+            HesitationListView()
         case .fingerprint:
             FingerprintGalleryView(days: model.days)
         case .speedTest:
@@ -91,5 +117,49 @@ struct RootView: View {
         case .settings:
             SettingsView()
         }
+    }
+
+    private var paletteOverlay: some View {
+        ZStack(alignment: .top) {
+            Color.black.opacity(0.28)
+                .ignoresSafeArea()
+                .onTapGesture { palette.dismiss() }
+            CommandPaletteView(model: palette)
+                .padding(.top, 110)
+                .transition(.scale(scale: 0.97).combined(with: .opacity))
+        }
+    }
+
+    private func rebuildCommands() {
+        var commands: [PaletteCommand] = SidebarItem.allCases.map { item in
+            PaletteCommand(
+                id: "nav.\(item.id)",
+                title: item.title,
+                symbol: item.symbol,
+                section: "Go to",
+                keywords: ["open", "show", item.section]
+            ) { selection = item }
+        }
+
+        for (offset, session) in model.sessions.enumerated() {
+            let index = model.sessions.count - offset
+            commands.append(
+                PaletteCommand(
+                    id: "session.\(session.id)",
+                    title: "Session \(index)",
+                    subtitle: "\(session.category.displayName) · "
+                        + "\(DisplayFormat.wpm(session.metrics.grossWPM)) wpm · "
+                        + DisplayFormat.relativeDay(session.startedAt),
+                    symbol: "waveform",
+                    section: "Sessions",
+                    keywords: [session.category.displayName, session.appName ?? ""]
+                ) {
+                    selectedSession = session.id
+                    selection = .sessions
+                }
+            )
+        }
+
+        palette.commands = commands
     }
 }
