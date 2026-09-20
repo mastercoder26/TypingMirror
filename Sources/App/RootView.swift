@@ -72,6 +72,10 @@ struct RootView: View {
                 onReplay: { _ in },
                 onDelete: { id in Task { await model.delete(sessionID: id) } }
             )
+        case .compare:
+            SessionCompareView(sessions: model.sessions)
+        case .corrections:
+            CorrectionHeatmapView(sessions: model.sessions)
         case .speedTest:
             SpeedTestView()
         case .practice:
