@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
 
     @State private var selection: SidebarItem = .today
+    @State private var selectedSession: SessionRecord.ID?
     @AppStorage("onboarding.completed.v1") private var hasOnboarded = false
     @State private var showingOnboarding = false
 
@@ -42,22 +43,44 @@ struct RootView: View {
             }
         }
         .navigationSplitViewColumnWidth(Tk.L.sidebarWidth)
+        .safeAreaInset(edge: .bottom) { sidebarFooter }
+    }
+
+    private var sidebarFooter: some View {
+        HStack(spacing: Tk.S.s2) {
+            if let coordinator = model.coordinator, coordinator.state == .running {
+                Circle()
+                    .fill(Tk.C.textPrimary)
+                    .frame(width: 5, height: 5)
+                Text("Watching")
+                    .font(Tk.F.caption)
+                    .foregroundStyle(Tk.C.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Tk.S.s4)
+        .padding(.vertical, Tk.S.s3)
     }
 
     @ViewBuilder
     private var detail: some View {
         switch selection {
         case .today:
-            VStack(alignment: .leading, spacing: Tk.S.s4) {
-                Text("Today")
-                    .font(Tk.F.title)
-                    .foregroundStyle(Tk.C.textPrimary)
-                Text("Sessions will land here once capture is wired up.")
-                    .font(Tk.F.body)
-                    .foregroundStyle(Tk.C.textSecondary)
+            DashboardView(sessions: model.sessions, days: model.days) { id in
+                selectedSession = id
+                selection = .sessions
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(Tk.S.s6)
+        case .sessions:
+            SessionListView(
+                sessions: model.sessions,
+                selection: $selectedSession,
+                onReplay: { _ in },
+                onDelete: { id in Task { await model.delete(sessionID: id) } }
+            )
+        case .speedTest:
+            SpeedTestView()
+        case .practice:
+            PracticePadView()
         case .settings:
             SettingsView()
         }
