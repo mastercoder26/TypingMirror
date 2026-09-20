@@ -11,14 +11,12 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     MACOSX_DEPLOYMENT_TARGET: "26.0"
-    # A stable signature matters here: macOS ties the Accessibility grant to it,
-    # so ad-hoc signing makes the user re-approve after every single rebuild.
-    CODE_SIGN_STYLE: Manual
-    CODE_SIGN_IDENTITY: "236EA3A04B9CD9A467D96AC165FAD04803BB00C4"
+    # Do not pin a developer certificate or team in source control. Xcode uses a
+    # local development identity when one is configured and otherwise signs to
+    # run locally, so a fresh checkout builds on any developer's Mac.
+    CODE_SIGN_STYLE: Automatic
     CODE_SIGNING_REQUIRED: YES
     CODE_SIGNING_ALLOWED: YES
-    DEVELOPMENT_TEAM: 87459B8PDS
-    PROVISIONING_PROFILE_SPECIFIER: ""
     ENABLE_HARDENED_RUNTIME: YES
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: NO
