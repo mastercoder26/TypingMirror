@@ -1,112 +1,110 @@
 # TypingMirror
 
-A native macOS app that analyses **how** you type, not **what** you type.
+A macOS app for seeing your typing habits.
 
-It measures rhythm, bursts, pauses, corrections and speed, then shows how your
-typing style changes between coding, writing, messaging and homework.
+## Description
 
-## The privacy claim, and why it holds
+A words-per-minute score only tells part of the story. TypingMirror shows the
+pauses, bursts and corrections that happen while typing. There's a speed test
+and a practice pad. You can also turn on capture in other apps to see how your
+typing changes while coding, writing or messaging.
 
-Every keystroke is reduced to two things: **when** it happened and **what kind**
-of key it was (letter, digit, space, punctuation, backspace, navigation…).
+Open a saved session to see its rhythm, replay it, or see where you backspace.
+TypingMirror also makes a daily fingerprint from your typing stats.
 
-The keycode is resolved to a class *inside the event-tap callback* and discarded
-there, so character identity never outlives a single stack frame and never
-reaches the ring buffer, let alone disk. That is a property of the data
-structures rather than a setting, which is what makes it checkable rather than
-promised — see `Capture/RawKeyEvent.swift`, which has nowhere to put a character.
+### Screenshots
 
-macOS never delivers keystrokes to any app while a password field has focus, so
-passwords cannot reach TypingMirror even by accident. Password managers and Mail
-are excluded by default on top of that.
+![TypingMirror's speed test, with speed, accuracy, progress and live rhythm](docs/images/speed-test.jpg)
 
-One feature is an exception, and it is opt-in, off by default, and requires
-typing a confirmation: **Rhythm and words** stores the words themselves so
-hesitation can be reported per word. Even then, words are filtered for anything
-credential-shaped (digits, internal capitals, addresses, paths, low-vowel
-strings), deleted after 14 days, listed in full in an inspector you can open, and
-destroyed the moment the tier is switched off.
+The speed test starts timing when you press the first key.
 
-Nothing is ever uploaded. There is no account, no sync, no network call, and no
-background agent — the app only watches while it is open.
+### Privacy
 
-## Features
+The default setting records timing and key types, such as letters, spaces and
+backspaces. It does not record the text you type. Capture in other apps is off by
+default and pauses when macOS Secure Input is active. Password managers,
+Messages and Mail are excluded by default.
 
-- **Live rhythm graph** — typing speed rising and falling as you type
-- **Speed test** — monkeytype-style, with net and raw accuracy reported separately
-- **Practice pad** — free typing that records a real session
-- **Session detail** — duration, speed, fastest burst, corrections, longest pause
-- **Typing styles** — steady / fast bursts / careful / rapid editing, each explaining itself
-- **Correction heatmap** — how far into a word your backspaces land
-- **Compare** — coding vs writing vs messaging
-- **Replay** — the rhythm of a session played back, with a "skip the thinking" mode
-- **Daily fingerprint** — a generative mark per day, deterministic from that day's style
-- **Hesitations** — words you slow down on (opt-in tier only)
-- **⌘K palette** — fuzzy search over everything
+Everything stays on your Mac. There is no account or sync, and capture runs only
+while the app is open.
 
-## Requirements
+If you want to see which words you hesitate on in a speed test, you can enable
+**Rhythm and words** in Settings. This is the only mode that stores actual words,
+and you must type `ALLOW` to turn it on. The filter rejects words that look like
+credentials. Expired words are cleared when the app starts; the retention window
+defaults to 14 days. Turning this mode off also clears stored words. You can
+inspect or delete them in Settings.
+
+## Getting Started
+
+### Dependencies
 
 - macOS 26.0 or later
 - Xcode 27
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
-## Build and run
+### Installing
+
+Clone the repository and install XcodeGen:
+
+```bash
+git clone https://github.com/mastercoder26/TypingMirror.git
+cd TypingMirror
+brew install xcodegen
+```
+
+Generate the Xcode project:
 
 ```bash
 xcodegen generate
+```
+
+### Executing program
+
+Open `TypingMirror.xcodeproj` in Xcode, select the `TypingMirror` scheme and run
+it. You can also build and launch it from the terminal:
+
+```bash
 xcodebuild -project TypingMirror.xcodeproj -scheme TypingMirror \
   -configuration Debug -destination 'platform=macOS,arch=arm64' \
   -derivedDataPath build build
 open build/Build/Products/Debug/TypingMirror.app
 ```
 
-Run the core tests (no host app needed):
+Begin with **Speed test** or **Practice pad**. Both work without permission to
+monitor other apps. If you want to record typing in other apps, open Settings
+and enable **Watch typing in other apps**. macOS will request Input Monitoring permission.
+Use `⌘K` to jump between screens.
+
+### Tests
+
+The core package contains its own tests. From the repository root, run:
 
 ```bash
-cd Packages/TypingMirrorKit && swift test
+cd Packages/TypingMirrorKit
+swift test
 ```
 
-## Architecture
+The SwiftUI app lives in `Sources/`. Capture, metrics, storage and replay live in
+`Packages/TypingMirrorKit/`, so you can work on the core without running the app.
+Typing-style labels use rules that you can read in the package's `Analysis/`
+folder.
 
-```
-Packages/TypingMirrorKit/   UI-free core, independently testable
-  Capture/    event tap, ring buffer, key classification, segmentation
-  Codec/      TMK1 binary format for keystroke streams
-  Metrics/    speed, intervals, bursts, pauses, test scoring
-  Analysis/   rule-based typing-style classifier
-  Fingerprint/ deterministic visual parameters
-  Replay/     playback track and clock
-  Privacy/    tiers, word filter, capture settings
-  Model/      SwiftData models and the store actor
-Sources/                    the app
-  DesignSystem/  tokens and glass components
-  Input/         NSTextInputClient keystroke capture
-  Palette/       ⌘K command palette
-  Features/      one folder per screen
-```
+## Help
 
-### Notes on a few decisions
+If capture in other apps is not working:
 
-**Global capture cannot be sandboxed.** `CGEvent.tapCreate` for keyboard events
-fails under App Sandbox and no entitlement enables it, so the app ships
-non-sandboxed and cannot go to the Mac App Store. Everything in-app works with no
-permission at all; global capture is strictly additive.
+- Check **System Settings → Privacy & Security → Input Monitoring**. You may
+  have to give permission again after you rebuild.
+- Capture pauses during Secure Input and skips excluded apps. Check the capture
+  status and exclusion list in Settings.
+- The speed test and practice pad still work when global capture is off.
 
-**The tap runs on its own thread.** On the main run loop a long layout pass
-starves the callback and macOS disables the tap with
-`kCGEventTapDisabledByTimeout` — the most common way tap-based capture silently
-stops working. It is also `.listenOnly`, so it can never drop or delay a
-keystroke.
+The app runs without App Sandbox because global keyboard capture requires it.
 
-**The live graph does not observe the keystroke buffer.** `RhythmBuffer` is
-deliberately not `@Observable`: typing mutates it with zero SwiftUI
-invalidations, and the `Canvas` redraws on the display's own schedule. Input rate
-and draw rate are decoupled.
+For other problems, [open an issue](https://github.com/mastercoder26/TypingMirror/issues)
+with what happened and the steps to reproduce it.
 
-**Style labels are rules, not a model.** There is no ground-truth dataset for
-"burst-heavy", the system must work on your first session, it has to explain
-itself, and a retrained model would silently relabel your whole history.
+## License
 
-**Ad-hoc signing resets the Accessibility grant.** macOS ties the grant to the
-code signature, so you will need to re-approve after most rebuilds. Only global
-capture is affected.
+This repository does not yet contain a license file.
